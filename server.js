@@ -1,7 +1,7 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 import axios from "axios";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
 
@@ -23,108 +23,95 @@ async function getToken(){
 
 
 
-const server = new McpServer({
-    name:"feishu-mcp",
-    version:"1.0.0"
-});
+function createServer(){
+
+    const server = new McpServer({
+        name:"feishu-mcp",
+        version:"1.0.0"
+    });
 
 
+    server.tool(
+        "feishu_get_base",
+        "获取飞书 Base 信息",
+        {
+            app_token:z.string()
+        },
 
-// 获取 Base 信息
-server.tool(
-    "feishu_get_base",
-    "获取飞书 Base 信息",
-    {
-        app_token:z.string()
-    },
+        async({app_token})=>{
 
-    async({app_token})=>{
-
-        const token = await getToken();
-
-        const result = await axios.get(
-            `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}`,
-            {
-                headers:{
-                    Authorization:`Bearer ${token}`
-                }
-            }
-        );
+            const token = await getToken();
 
 
-        return {
-            content:[
+            const result = await axios.get(
+                `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}`,
                 {
-                    type:"text",
-                    text:JSON.stringify(result.data,null,2)
+                    headers:{
+                        Authorization:`Bearer ${token}`
+                    }
                 }
-            ]
-        };
-
-    }
-);
+            );
 
 
+            return {
+                content:[
+                    {
+                        type:"text",
+                        text:JSON.stringify(result.data,null,2)
+                    }
+                ]
+            };
+
+        }
+    );
 
 
-// 获取表列表
-server.tool(
-    "feishu_list_tables",
-    "获取 Base 的数据表列表",
-    {
-        app_token:z.string()
-    },
 
-    async({app_token})=>{
+    server.tool(
+        "feishu_list_tables",
+        "获取 Base 表列表",
+        {
+            app_token:z.string()
+        },
 
-        const token = await getToken();
+        async({app_token})=>{
 
-        const result = await axios.get(
-            `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}/tables`,
-            {
-                headers:{
-                    Authorization:`Bearer ${token}`
-                }
-            }
-        );
+            const token = await getToken();
 
 
-        return {
-            content:[
+            const result = await axios.get(
+                `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}/tables`,
                 {
-                    type:"text",
-                    text:JSON.stringify(result.data,null,2)
+                    headers:{
+                        Authorization:`Bearer ${token}`
+                    }
                 }
-            ]
-        };
+            );
 
-    }
-);
+
+            return {
+                content:[
+                    {
+                        type:"text",
+                        text:JSON.stringify(result.data,null,2)
+                    }
+                ]
+            };
+
+        }
+    );
+
+
+    return server;
+
+}
+
 
 
 
 const app = express();
 
 app.use(express.json());
-
-
-app.post("/mcp", async(req,res)=>{
-
-    const transport =
-        new StreamableHTTPServerTransport({
-            sessionIdGenerator:undefined
-        });
-
-
-    await server.connect(transport);
-
-    await transport.handleRequest(
-        req,
-        res,
-        req.body
-    );
-
-});
 
 
 
@@ -135,6 +122,34 @@ app.get("/",(req,res)=>{
     });
 
 });
+
+
+
+app.post("/mcp", async(req,res)=>{
+
+
+    const server = createServer();
+
+
+    const transport =
+        new StreamableHTTPServerTransport({
+            sessionIdGenerator:undefined
+        });
+
+
+    await server.connect(transport);
+
+
+    await transport.handleRequest(
+        req,
+        res,
+        req.body
+    );
+
+
+});
+
+
 
 
 const PORT = process.env.PORT || 3000;
