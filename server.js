@@ -1,14 +1,13 @@
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import express from "express";
 import axios from "axios";
+import { z } from "zod";
 
-const app = express();
-
-app.use(express.json());
 
 const FEISHU_API = "https://open.feishu.cn";
 
 
-// 获取飞书 Token
 async function getToken(){
 
     const res = await axios.post(
@@ -24,175 +23,118 @@ async function getToken(){
 
 
 
-// 首页
-app.get("/", (req,res)=>{
-
-    res.json({
-        name:"feishu-mcp",
-        status:"running"
-    });
-
+const server = new McpServer({
+    name:"feishu-mcp",
+    version:"1.0.0"
 });
-
-
-
-
-// 测试飞书连接
-app.get("/test", async(req,res)=>{
-
-    try{
-
-        const token = await getToken();
-
-        res.json({
-            success:true,
-            token:token.substring(0,10)+"..."
-        });
-
-
-    }catch(e){
-
-        res.json({
-            success:false,
-            error:e.response?.data || e.message
-        });
-
-    }
-
-});
-
 
 
 
 // 获取 Base 信息
-app.get("/base", async(req,res)=>{
+server.tool(
+    "feishu_get_base",
+    "获取飞书 Base 信息",
+    {
+        app_token:z.string()
+    },
 
-    try{
-
-        const app_token = req.query.app_token;
+    async({app_token})=>{
 
         const token = await getToken();
 
-
         const result = await axios.get(
-
             `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}`,
-
             {
                 headers:{
                     Authorization:`Bearer ${token}`
                 }
             }
-
         );
 
 
-        res.json(result.data);
-
-
-    }catch(e){
-
-        res.json({
-            error:e.response?.data || e.message
-        });
+        return {
+            content:[
+                {
+                    type:"text",
+                    text:JSON.stringify(result.data,null,2)
+                }
+            ]
+        };
 
     }
-
-});
-
+);
 
 
 
 
-// 获取 Base 表列表
-app.get("/tables", async(req,res)=>{
+// 获取表列表
+server.tool(
+    "feishu_list_tables",
+    "获取 Base 的数据表列表",
+    {
+        app_token:z.string()
+    },
 
-    try{
-
-        const app_token = req.query.app_token;
+    async({app_token})=>{
 
         const token = await getToken();
 
-
         const result = await axios.get(
-
             `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}/tables`,
-
             {
                 headers:{
                     Authorization:`Bearer ${token}`
                 }
             }
-
         );
 
 
-        res.json(result.data);
-
-
-    }catch(e){
-
-        res.json({
-            error:e.response?.data || e.message
-        });
-
-    }
-
-});
-
-
-
-
-
-// 获取表数据
-app.get("/records", async(req,res)=>{
-
-
-    try{
-
-
-        const app_token = req.query.app_token;
-
-        const table_id = req.query.table_id;
-
-
-        const token = await getToken();
-
-
-
-        const result = await axios.get(
-
-            `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}/tables/${table_id}/records`,
-
-            {
-                headers:{
-                    Authorization:`Bearer ${token}`
+        return {
+            content:[
+                {
+                    type:"text",
+                    text:JSON.stringify(result.data,null,2)
                 }
-            }
+            ]
+        };
 
-        );
-
-
-        res.json(result.data);
-
+    }
+);
 
 
-    }catch(e){
+
+const app = express();
+
+app.use(express.json());
 
 
-        res.json({
-            error:e.response?.data || e.message
+app.post("/mcp", async(req,res)=>{
+
+    const transport =
+        new StreamableHTTPServerTransport({
+            sessionIdGenerator:undefined
         });
 
 
-    }
+    await server.connect(transport);
 
+    await transport.handleRequest(
+        req,
+        res,
+        req.body
+    );
 
 });
 
 
 
+app.get("/",(req,res)=>{
 
+    res.json({
+        status:"feishu mcp running"
+    });
+
+});
 
 
 const PORT = process.env.PORT || 3000;
@@ -201,7 +143,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT,()=>{
 
     console.log(
-        "Feishu MCP running on port "+PORT
+        "MCP running on "+PORT
     );
 
 });
