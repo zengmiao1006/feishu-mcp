@@ -6,7 +6,9 @@
     "start": "node server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
     "axios": "latest",
-    "express": "latest"
+    "express": "latest",
+    "zod": "latest"
   }
 }
