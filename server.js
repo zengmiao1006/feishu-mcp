@@ -9,6 +9,7 @@ app.use(express.json());
 const FEISHU_API = "https://open.feishu.cn";
 
 
+// 获取飞书 Token
 async function getToken(){
 
     const res = await axios.post(
@@ -23,6 +24,8 @@ async function getToken(){
 }
 
 
+
+// 首页
 app.get("/", (req,res)=>{
 
     res.json({
@@ -33,6 +36,8 @@ app.get("/", (req,res)=>{
 });
 
 
+
+// 测试飞书连接
 app.get("/test", async(req,res)=>{
 
     try{
@@ -56,6 +61,70 @@ app.get("/test", async(req,res)=>{
 });
 
 
+
+// 获取 Base 信息
+app.get("/base", async(req,res)=>{
+
+    try{
+
+        const app_token = req.query.app_token;
+
+
+        if(!app_token){
+
+            return res.json({
+                success:false,
+                error:"缺少 app_token"
+            });
+
+        }
+
+
+        const token = await getToken();
+
+
+        const result = await axios.get(
+
+            `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}`,
+
+            {
+                headers:{
+                    Authorization:`Bearer ${token}`
+                }
+            }
+
+        );
+
+
+        res.json({
+
+            success:true,
+
+            data:result.data
+
+        });
+
+
+    }catch(e){
+
+
+        res.json({
+
+            success:false,
+
+            error:e.response?.data || e.message
+
+        });
+
+
+    }
+
+});
+
+
+
+
+// 启动服务
 const PORT = process.env.PORT || 3000;
 
 
