@@ -5,7 +5,6 @@ const app = express();
 
 app.use(express.json());
 
-
 const FEISHU_API = "https://open.feishu.cn";
 
 
@@ -37,6 +36,7 @@ app.get("/", (req,res)=>{
 
 
 
+
 // 测试飞书连接
 app.get("/test", async(req,res)=>{
 
@@ -46,19 +46,21 @@ app.get("/test", async(req,res)=>{
 
         res.json({
             success:true,
-            token: token.substring(0,10)+"..."
+            token:token.substring(0,10)+"..."
         });
+
 
     }catch(e){
 
         res.json({
             success:false,
-            error:e.message
+            error:e.response?.data || e.message
         });
 
     }
 
 });
+
 
 
 
@@ -68,17 +70,6 @@ app.get("/base", async(req,res)=>{
     try{
 
         const app_token = req.query.app_token;
-
-
-        if(!app_token){
-
-            return res.json({
-                success:false,
-                error:"缺少 app_token"
-            });
-
-        }
-
 
         const token = await getToken();
 
@@ -96,26 +87,14 @@ app.get("/base", async(req,res)=>{
         );
 
 
-        res.json({
-
-            success:true,
-
-            data:result.data
-
-        });
+        res.json(result.data);
 
 
     }catch(e){
 
-
         res.json({
-
-            success:false,
-
             error:e.response?.data || e.message
-
         });
-
 
     }
 
@@ -124,7 +103,98 @@ app.get("/base", async(req,res)=>{
 
 
 
-// 启动服务
+
+// 获取 Base 表列表
+app.get("/tables", async(req,res)=>{
+
+    try{
+
+        const app_token = req.query.app_token;
+
+        const token = await getToken();
+
+
+        const result = await axios.get(
+
+            `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}/tables`,
+
+            {
+                headers:{
+                    Authorization:`Bearer ${token}`
+                }
+            }
+
+        );
+
+
+        res.json(result.data);
+
+
+    }catch(e){
+
+        res.json({
+            error:e.response?.data || e.message
+        });
+
+    }
+
+});
+
+
+
+
+
+// 获取表数据
+app.get("/records", async(req,res)=>{
+
+
+    try{
+
+
+        const app_token = req.query.app_token;
+
+        const table_id = req.query.table_id;
+
+
+        const token = await getToken();
+
+
+
+        const result = await axios.get(
+
+            `${FEISHU_API}/open-apis/bitable/v1/apps/${app_token}/tables/${table_id}/records`,
+
+            {
+                headers:{
+                    Authorization:`Bearer ${token}`
+                }
+            }
+
+        );
+
+
+        res.json(result.data);
+
+
+
+    }catch(e){
+
+
+        res.json({
+            error:e.response?.data || e.message
+        });
+
+
+    }
+
+
+});
+
+
+
+
+
+
 const PORT = process.env.PORT || 3000;
 
 
