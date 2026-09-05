@@ -1,6 +1,9 @@
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import express from "express";
 import axios from "axios";
+
+const app = express();
+
+app.use(express.json());
 
 
 const FEISHU_API = "https://open.feishu.cn";
@@ -20,59 +23,46 @@ async function getToken(){
 }
 
 
-const server = new Server(
-{
-    name:"feishu-mcp",
-    version:"1.0.0"
-},
-{
-    capabilities:{
-        tools:{}
-    }
+app.get("/", (req,res)=>{
+
+    res.json({
+        name:"feishu-mcp",
+        status:"running"
+    });
+
 });
 
 
-server.setRequestHandler(
-    "tools/list",
-    async ()=>{
-        return {
-            tools:[
-                {
-                    name:"feishu_test",
-                    description:"测试飞书连接",
-                    inputSchema:{
-                        type:"object",
-                        properties:{}
-                    }
-                }
-            ]
-        }
-    }
-);
+app.get("/test", async(req,res)=>{
 
+    try{
 
-server.setRequestHandler(
-    "tools/call",
-    async(req)=>{
+        const token = await getToken();
 
-        if(req.params.name==="feishu_test"){
+        res.json({
+            success:true,
+            token: token.substring(0,10)+"..."
+        });
 
-            const token = await getToken();
+    }catch(e){
 
-            return {
-                content:[
-                    {
-                        type:"text",
-                        text:"飞书连接成功 Token:"+token.substring(0,10)+"..."
-                    }
-                ]
-            }
-        }
+        res.json({
+            success:false,
+            error:e.message
+        });
 
     }
-);
+
+});
 
 
-const transport = new StdioServerTransport();
+const PORT = process.env.PORT || 3000;
 
-await server.connect(transport);
+
+app.listen(PORT,()=>{
+
+    console.log(
+        "Feishu MCP running on port "+PORT
+    );
+
+});
